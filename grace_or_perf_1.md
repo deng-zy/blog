@@ -28,11 +28,11 @@ private function getSKuAlias(string $sku): Collection
     return $alias->push($sku)->toArray();
 }
 ```
-解释一下上面的代码，把sku_alias的数据给allSkuAlias属性，然后去查找sku或别名等于参数sku的数据。然后再将结果返回。sku_alias的数表一共714条数据。服务器配置没有被砍的时候，可以掩盖此段代码的性能问题，当服务器配置被砍，性能问题就暴露了，因为getSKuAlias的时间复杂度是O(N²)，一共需要进行1428次查找，更为糟糕的是getSKuAlias方法还会被循环调用。cpu 100%也就是不足为怪了。为什么getSKuAlias的时间复杂度是O(N²)，熟悉Laravel的朋友都知道
+解释一下上面的代码，查询sku_alias数据表，将数据表的查询结果给allSkuAlias属性，然后去对allSkuAlias查找sku或别名等于参数sku的数据。然后再将查找结果返回。sku_alias的数表一共714条数据。服务器配置没有被砍的时候，可以掩盖此段代码的性能问题，当服务器配置被砍，性能问题就暴露了，因为getSKuAlias的时间复杂度是O(N²)，一共需要进行1428次查找，更为糟糕的是getSKuAlias方法还会被循环调用。cpu 100%也就是不足为怪了。为什么getSKuAlias的时间复杂度是O(N²)，熟悉Laravel的朋友都知道
 ```php
 DB::table('sku_alias')->get(); //这里返回的是Collection对象
 ```
-而Collection的where方法最终使用array_filter函数实现，而array_filter的时间复杂度是O(N)。既然知道了原因，优化方向就有了，把时间复杂度O(N²)优化成O(1)，第一时间想到的是用Hash数组（索引数组，其它语言里面叫map或dict）。由于一个sku会有多个别名，所以需要两个Hash数组，在进行查找sku对应别名时需要一个一对多的Hash数组。在进行别名对应sku的查找时，需要定义一对一的Hash数组，以刚才apple-13pro-red-64的举例，两个Hash数组定义如下:
+而Collection的where方法最终是用php array_filter函数实现，而array_filter的时间复杂度是O(N)。既然知道了原因，优化方向就有了，把时间复杂度O(N²)优化成O(1)，第一时间想到的是用Hash数组（索引数组，其它语言里面叫map或dict）。由于一个sku会有多个别名，所以需要两个Hash数组，在进行查找sku对应别名时需要一个一对多的Hash数组。在进行别名对应sku的查找时，需要定义一对一的Hash数组，以刚才apple-13pro-red-64的举例，两个Hash数组定义如下:
 
 ```php
 [
