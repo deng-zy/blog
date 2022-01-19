@@ -50,7 +50,7 @@ DB::table('sku_alias')->get(); //这里返回的是Collection对象
 
 优化后的最终代码:
 ```php
-private function getSKuAlias($sku)
+private function getSKuAlias(string $sku): array
 {
     if ($this->allSkuAlias === null) {
         $source =  DB::table('sku_alias')
